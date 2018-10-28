@@ -133,7 +133,12 @@ module LSP::Message
   alias AnyInNotification =
     Cancel |
     Initialized |
-    Exit
+    Exit |
+    DidOpen |
+    DidChange |
+    WillSave |
+    DidSave |
+    DidClose
   
   alias AnyInRequest =
     Initialize |
@@ -503,16 +508,73 @@ module LSP::Message
   # needs to send a textDocument/didClose to the server followed by a
   # textDocument/didOpen with the new language id if the server handles the
   # new language id as well.
-  # TODO: struct DidOpen
+  struct DidOpen
+    Message.def_notification("textDocument/didOpen")
+    
+    struct Params
+      JSON.mapping({
+        # The document that was opened.
+        text_document: {type: Data::TextDocumentItem, key: "textDocument"},
+      })
+      def initialize(@text_document = Data::TextDocumentItem.new)
+      end
+    end
+  end
   
   # The document change notification is sent from the client to the server to
   # signal changes to a text document. In 2.0 the shape of the params has
   # changed to include proper version numbers and language ids.
-  # TODO: struct DidChange
+  struct DidChange
+    Message.def_notification("textDocument/didChange")
+    
+    struct Params
+      JSON.mapping({
+        # The document that did change. The version number points
+        # to the version after all provided content changes have
+        # been applied.
+        text_document: {
+          type: Data::TextDocumentVersionedIdentifier,
+          key: "textDocument"
+        },
+        
+        # The actual content changes. The content changes describe single state
+        # changes to the document. So if there are two content changes
+        # c1 and c2 for a document in state S then c1 move the document
+        # to S' and c2 to S''.
+        content_changes: {
+          type: Array(Data::TextDocumentContentChangeEvent),
+          key: "contentChanges"
+        },
+      })
+      def initialize(
+        @text_document = Data::TextDocumentVersionedIdentifier.new,
+        @content_changes = [] of Data::TextDocumentContentChangeEvent)
+      end
+    end
+  end
   
   # The document will save notification is sent from the client to the server
   # before the document is actually saved.
-  # TODO: struct WillSave
+  struct WillSave
+    Message.def_notification("textDocument/willSave")
+    
+    struct Params
+      JSON.mapping({
+        # The document that will be saved.
+        text_document: {
+          type: Data::TextDocumentIdentifier,
+          key: "textDocument"
+        },
+        
+        # Represents the reason why the document will be saved.
+        reason: Data::TextDocumentSaveReason,
+      })
+      def initialize(
+        @text_document = Data::TextDocumentIdentifier.new,
+        @reason = Data::TextDocumentSaveReason::Manual)
+      end
+    end
+  end
   
   # The document will save request is sent from the client to the server before
   # the document is actually saved. The request can return an array of
@@ -525,7 +587,27 @@ module LSP::Message
   
   # The document save notification is sent from the client to the server when
   # the document was saved in the client.
-  # TODO: struct DidSave
+  struct DidSave
+    Message.def_notification("textDocument/didSave")
+    
+    struct Params
+      JSON.mapping({
+        # The document that was saved.
+        text_document: {
+          type: Data::TextDocumentIdentifier,
+          key: "textDocument"
+        },
+        
+        # Optional the content when saved. Depends on the includeText value
+        # when the save notification was requested.
+        text: String?,
+      })
+      def initialize(
+        @text_document = Data::TextDocumentIdentifier.new,
+        @text = nil)
+      end
+    end
+  end
   
   # The document close notification is sent from the client to the server when
   # the document got closed in the client. The document’s truth now exists
@@ -537,7 +619,21 @@ module LSP::Message
   # a previous open notification to be sent.
   # Note that a server’s ability to fulfill requests is independent of whether
   # a text document is open or closed.
-  # TODO: struct DidClose
+  struct DidClose
+    Message.def_notification("textDocument/didClose")
+    
+    struct Params
+      JSON.mapping({
+        # The document that was closed.
+        text_document: {
+          type: Data::TextDocumentIdentifier,
+          key: "textDocument"
+        },
+      })
+      def initialize(@text_document = Data::TextDocumentIdentifier.new)
+      end
+    end
+  end
   
   # Diagnostics notification are sent from the server to the client to signal
   # results of validation runs.

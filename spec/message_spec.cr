@@ -450,6 +450,151 @@ describe LSP::Message do
       msg.request.should eq req
       msg.result.as(LSP::Data::MessageActionItem).title.should eq "Hello!"
     end
+    
+    it "parses DidOpen" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/didOpen",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo",
+            "languageId": "crystal",
+            "version": 42,
+            "text": "class Foo; end"
+          }
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::DidOpen
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.text_document.language_id.should eq "crystal"
+      msg.params.text_document.version.should eq 42
+      msg.params.text_document.text.should eq "class Foo; end"
+    end
+    
+    it "parses DidChange (full document)" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/didChange",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo",
+            "version": 42
+          },
+          "contentChanges": [
+            {
+              "text": "class Foo; end"
+            }
+          ]
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::DidChange
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.text_document.version.should eq 42
+      msg.params.content_changes[0].text.should eq "class Foo; end"
+    end
+    
+    it "parses DidChange (ranged)" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/didChange",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo",
+            "version": 42
+          },
+          "contentChanges": [
+            {
+              "range": {
+                "start": { "line": 4, "character": 2 },
+                "end": { "line": 4, "character": 5 }
+              },
+              "rangeLength": 3,
+              "text": "foo"
+            }
+          ]
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::DidChange
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.text_document.version.should eq 42
+      range = msg.params.content_changes[0].range.as(LSP::Data::Range)
+      range.start.line.should eq 4
+      range.start.character.should eq 2
+      range.finish.line.should eq 4
+      range.finish.character.should eq 5
+      msg.params.content_changes[0].range_length.should eq 3
+      msg.params.content_changes[0].text.should eq "foo"
+    end
+    
+    it "parses WillSave" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/willSave",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo"
+          },
+          "reason": 2
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::WillSave
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.reason.should eq LSP::Data::TextDocumentSaveReason::AfterDelay
+    end
+    
+    it "parses DidSave" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/didSave",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo"
+          },
+          "text": "class Foo; end"
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::DidSave
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.text.should eq "class Foo; end"
+    end
+    
+    it "parses DidClose" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "method": "textDocument/didClose",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo"
+          }
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::DidClose
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+    end
   end
   
   describe "Any.to_json" do
