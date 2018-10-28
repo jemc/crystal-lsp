@@ -144,7 +144,8 @@ module LSP::Message
     Initialize |
     Shutdown |
     Completion |
-    CompletionItemResolve
+    CompletionItemResolve |
+    Hover
   
   alias AnyInResponse =
     GenericResponse |
@@ -160,7 +161,8 @@ module LSP::Message
     Initialize::Response |
     Shutdown::Response |
     Completion::Response |
-    CompletionItemResolve::Response
+    CompletionItemResolve::Response |
+    Hover::Response
   
   alias AnyOutRequest =
     ShowMessageRequest
@@ -733,7 +735,44 @@ module LSP::Message
   
   # The hover request is sent from the client to the server to request hover
   # information at a given text document position.
-  # TODO: struct Hover
+  struct Hover
+    Message.def_request("textDocument/hover")
+    
+    struct Params
+      JSON.mapping({
+        # The text document.
+        text_document: {
+          type: Data::TextDocumentIdentifier,
+          key: "textDocument",
+        },
+        
+        # The position inside the text document.
+        position: Data::Position,
+      })
+      def initialize(
+        @text_document = Data::TextDocumentIdentifier.new,
+        @position = Data::Position.new)
+      end
+    end
+    
+    # TODO: allow null result when nothing to show
+    struct Result
+      JSON.mapping({
+        # The hover's content
+        contents: Data::MarkupContent,
+        
+        # An optional range is a range inside a text document that is used
+        # to visualize a hover, e.g. by changing the background color.
+        range: Data::Range?,
+      })
+      def initialize(
+        @contents = Data::MarkupContent.new,
+        @range = nil)
+      end
+    end
+    
+    alias ErrorData = Nil
+  end
   
   # The signature help request is sent from the client to the server to request
   # signature information at a given cursor position.

@@ -734,6 +734,32 @@ describe LSP::Message do
       end
       msg.params.data.should eq JSON::Any.new({"foo" => JSON::Any.new("bar")})
     end
+    
+    it "parses Hover" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "method": "textDocument/hover",
+        "jsonrpc": "2.0",
+        "id": "example",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo"
+          },
+          "position": {
+            "line": 4,
+            "character": 2
+          }
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::Hover
+      msg.id.should eq "example"
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.position.line.should eq 4
+      msg.params.position.character.should eq 2
+    end
   end
   
   describe "Any.to_json" do
@@ -1367,6 +1393,42 @@ describe LSP::Message do
           },
           "data": {
             "foo": "bar"
+          }
+        }
+      }
+      EOF
+    end
+    
+    it "builds Hover::Response" do
+      req = LSP::Message::Hover.new "example"
+      msg = req.new_response
+      msg.result.contents = LSP::Data::MarkupContent.new("markdown", "...")
+      msg.result.range = LSP::Data::Range.new.try do |range|
+        range.start.line = 4
+        range.start.character = 2
+        range.finish.line = 4
+        range.finish.character = 5
+        range
+      end
+      
+      msg.to_pretty_json.should eq <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "id": "example",
+        "result": {
+          "contents": {
+            "kind": "markdown",
+            "value": "..."
+          },
+          "range": {
+            "start": {
+              "line": 4,
+              "character": 2
+            },
+            "end": {
+              "line": 4,
+              "character": 5
+            }
           }
         }
       }
