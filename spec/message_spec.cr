@@ -760,6 +760,32 @@ describe LSP::Message do
       msg.params.position.line.should eq 4
       msg.params.position.character.should eq 2
     end
+    
+    it "parses SignatureHelp" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "method": "textDocument/signatureHelp",
+        "jsonrpc": "2.0",
+        "id": "example",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo"
+          },
+          "position": {
+            "line": 4,
+            "character": 2
+          }
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::SignatureHelp
+      msg.id.should eq "example"
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.position.line.should eq 4
+      msg.params.position.character.should eq 2
+    end
   end
   
   describe "Any.to_json" do
@@ -1430,6 +1456,64 @@ describe LSP::Message do
               "character": 5
             }
           }
+        }
+      }
+      EOF
+    end
+    
+    it "builds SignatureHelp::Response" do
+      req = LSP::Message::SignatureHelp.new "example"
+      msg = req.new_response
+      msg.result.signatures << LSP::Data::SignatureInformation.new.try do |sig|
+        sig.label = "open(2)"
+        sig.documentation = LSP::Data::MarkupContent.new("markdown", "...")
+        sig.parameters << LSP::Data::ParameterInformation.new.try do |param|
+          param.label = "filename"
+          param.documentation = LSP::Data::MarkupContent.new("markdown", "...")
+          param
+        end
+        sig.parameters << LSP::Data::ParameterInformation.new.try do |param|
+          param.label = "mode"
+          param.documentation = LSP::Data::MarkupContent.new("markdown", "...")
+          param
+        end
+        sig
+      end
+      msg.result.active_signature = 0
+      msg.result.active_parameter = 1
+      
+      msg.to_pretty_json.should eq <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "id": "example",
+        "result": {
+          "signatures": [
+            {
+              "label": "open(2)",
+              "documentation": {
+                "kind": "markdown",
+                "value": "..."
+              },
+              "parameters": [
+                {
+                  "label": "filename",
+                  "documentation": {
+                    "kind": "markdown",
+                    "value": "..."
+                  }
+                },
+                {
+                  "label": "mode",
+                  "documentation": {
+                    "kind": "markdown",
+                    "value": "..."
+                  }
+                }
+              ]
+            }
+          ],
+          "activeSignature": 0,
+          "activeParameter": 1
         }
       }
       EOF

@@ -145,7 +145,8 @@ module LSP::Message
     Shutdown |
     Completion |
     CompletionItemResolve |
-    Hover
+    Hover |
+    SignatureHelp
   
   alias AnyInResponse =
     GenericResponse |
@@ -162,7 +163,8 @@ module LSP::Message
     Shutdown::Response |
     Completion::Response |
     CompletionItemResolve::Response |
-    Hover::Response
+    Hover::Response |
+    SignatureHelp::Response
   
   alias AnyOutRequest =
     ShowMessageRequest
@@ -776,7 +778,44 @@ module LSP::Message
   
   # The signature help request is sent from the client to the server to request
   # signature information at a given cursor position.
-  # TODO: struct SignatureHelp
+  struct SignatureHelp
+    Message.def_request("textDocument/signatureHelp")
+    
+    alias Params = Hover::Params
+    
+    # TODO: allow null result when nothing to show
+    struct Result
+      JSON.mapping({
+        # One or more signatures.
+        signatures: Array(Data::SignatureInformation),
+        
+        # The active signature. If omitted or the value lies outside the
+        # range of `signatures` the value defaults to zero or is ignored if
+        # `signatures.length === 0`. Whenever possible implementors should
+        # make an active decision about the active signature and shouldn't
+        # rely on a default value.
+        # In future version of the protocol this property might become
+        # mandatory to better express this.
+        active_signature: {type: Int64, default: 0_i64, key: "activeSignature"},
+        
+        # The active parameter of the active signature. If omitted or the value
+        # lies outside the range of `signatures[activeSignature].parameters`
+        # defaults to 0 if the active signature has parameters. If
+        # the active signature has no parameters it is ignored.
+        # In future version of the protocol this property might become
+        # mandatory to better express the active parameter if the
+        # active signature does have any.
+        active_parameter: {type: Int64, default: 0_i64, key: "activeParameter"},
+      })
+      def initialize(
+        @signatures = [] of Data::SignatureInformation,
+        @active_signature = 0_i64,
+        @active_parameter = 0_i64)
+      end
+    end
+    
+    alias ErrorData = Nil
+  end
   
   # The goto definition request is sent from the client to the server to
   # resolve the definition location of a symbol at a given text document
