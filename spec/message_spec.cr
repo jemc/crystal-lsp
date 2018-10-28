@@ -599,8 +599,8 @@ describe LSP::Message do
   
   describe "Any.to_json" do
     it "builds Cancel" do
-      msg = LSP::Message::Cancel.new \
-        LSP::Message::Cancel::Params.new("example")
+      msg = LSP::Message::Cancel.new
+      msg.params.id = "example"
       
       msg.to_pretty_json.should eq <<-EOF
       {
@@ -870,11 +870,9 @@ describe LSP::Message do
     end
     
     it "builds ShowMessage" do
-      msg = LSP::Message::ShowMessage.new \
-        LSP::Message::ShowMessage::Params.new(
-          LSP::Data::MessageType::Info,
-          "Hello, World!"
-        )
+      msg = LSP::Message::ShowMessage.new
+      msg.params.type = LSP::Data::MessageType::Info
+      msg.params.message = "Hello, World!"
       
       msg.to_pretty_json.should eq <<-EOF
       {
@@ -889,12 +887,11 @@ describe LSP::Message do
     end
     
     it "builds ShowMessageRequest" do
-      msg = LSP::Message::ShowMessageRequest.new "example",
-        LSP::Message::ShowMessageRequest::Params.new(
-          LSP::Data::MessageType::Info,
-          "Hello, World!",
-          ["Hello!", "Goodbye!"]
-        )
+      msg = LSP::Message::ShowMessageRequest.new("example")
+      msg.params.type = LSP::Data::MessageType::Info
+      msg.params.message = "Hello, World!"
+      msg.params.actions << LSP::Data::MessageActionItem.new("Hello!")
+      msg.params.actions << LSP::Data::MessageActionItem.new("Goodbye!")
       
       msg.to_pretty_json.should eq <<-EOF
       {
@@ -918,11 +915,9 @@ describe LSP::Message do
     end
     
     it "builds LogMessage" do
-      msg = LSP::Message::LogMessage.new \
-        LSP::Message::LogMessage::Params.new(
-          LSP::Data::MessageType::Info,
-          "Hello, World!"
-        )
+      msg = LSP::Message::LogMessage.new
+      msg.params.type = LSP::Data::MessageType::Info
+      msg.params.message = "Hello, World!"
       
       msg.to_pretty_json.should eq <<-EOF
       {

@@ -188,7 +188,7 @@ module LSP::Message
     
     struct Params
       JSON.mapping({id: Int64 | String})
-      def initialize(@id); end
+      def initialize(@id = 0_i64); end
     end
   end
   
@@ -330,7 +330,8 @@ module LSP::Message
         type: Data::MessageType,
         message: String,
       })
-      def initialize(@type, @message); end
+      def initialize(@type = Data::MessageType::Error, @message = "")
+      end
     end
   end
   
@@ -353,8 +354,7 @@ module LSP::Message
       def initialize(
         @type = LSP::Data::MessageType::Log,
         @message = "",
-        actions = [] of String)
-        @actions = actions.map { |a| LSP::Data::MessageActionItem.new(a) }
+        @actions = [] of LSP::Data::MessageActionItem)
       end
     end
     
@@ -372,7 +372,8 @@ module LSP::Message
         type: Data::MessageType,
         message: String,
       })
-      def initialize(@type, @message); end
+      def initialize(@type = Data::MessageType::Error, @message = "")
+      end
     end
   end
   
