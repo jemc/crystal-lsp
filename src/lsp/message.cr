@@ -11,7 +11,7 @@ module LSP::Message
       {% end %}
     })
     
-    def initialize({% if has_params %} @params {% end %})
+    def initialize({% if has_params %} @params = Params.new {% end %})
       @method = {{method}}
       @jsonrpc = "2.0"
     end
@@ -150,7 +150,8 @@ module LSP::Message
   
   alias AnyOutNotification =
     Cancel |
-    ShowMessage
+    ShowMessage |
+    PublishDiagnostics
   
   alias AnyOutResponse =
     GenericResponse |
@@ -653,7 +654,21 @@ module LSP::Message
   # has to push the empty array to clear former diagnostics. Newly pushed
   # diagnostics always replace previously pushed diagnostics. There is no
   # merging that happens on the client side.
-  # TODO: struct PublishDiagnostics
+  struct PublishDiagnostics
+    Message.def_notification("textDocument/publishDiagnostics")
+    
+    struct Params
+      JSON.mapping({
+        # The URI for which diagnostic information is reported.
+        uri: {type: URI, converter: JSONUtil::URIString},
+        
+        # An array of diagnostic information items.
+        diagnostics: Array(Data::Diagnostic),
+      })
+      def initialize(@uri = URI.new, @diagnostics = [] of Data::Diagnostic)
+      end
+    end
+  end
   
   # The Completion request is sent from the client to the server to compute
   # completion items at a given cursor position. Completion items are

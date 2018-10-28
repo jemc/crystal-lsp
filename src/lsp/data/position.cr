@@ -15,8 +15,8 @@ module LSP::Data
       character: Int64,
     })
     def initialize(
-      @line = 0,
-      @character = 0)
+      @line = 0_i64,
+      @character = 0_i64)
     end
   end
 end

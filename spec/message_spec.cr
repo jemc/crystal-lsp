@@ -950,5 +950,77 @@ describe LSP::Message do
       }
       EOF
     end
+    
+    it "builds PublishDiagnostics" do
+      msg = LSP::Message::PublishDiagnostics.new
+      msg.params.uri = URI.new("file", "/tmp/example/foo")
+      msg.params.diagnostics << LSP::Data::Diagnostic.new.try do |diag|
+        diag.range.start.line = 4
+        diag.range.start.character = 2
+        diag.range.finish.line = 4
+        diag.range.finish.character = 5
+        diag.severity = LSP::Data::Diagnostic::Severity::Warning
+        diag.code = "unused-assignment"
+        diag.source = "crystal"
+        diag.message = "Unused assignment to reference named 'foo'"
+        diag.related_information <<
+        LSP::Data::Diagnostic::RelatedInformation.new.try do |info|
+          info.location.uri = URI.new("file", "/tmp/example/foo")
+          info.location.range.start.line = 5
+          info.location.range.start.character = 0
+          info.location.range.finish.line = 5
+          info.location.range.finish.character = 2
+          info.message = "End of scope is here"
+          info
+        end
+        diag
+      end
+      
+      msg.to_pretty_json.should eq <<-EOF
+      {
+        "method": "textDocument/publishDiagnostics",
+        "jsonrpc": "2.0",
+        "params": {
+          "uri": "file:///tmp/example/foo",
+          "diagnostics": [
+            {
+              "range": {
+                "start": {
+                  "line": 4,
+                  "character": 2
+                },
+                "end": {
+                  "line": 4,
+                  "character": 5
+                }
+              },
+              "severity": 2,
+              "code": "unused-assignment",
+              "source": "crystal",
+              "message": "Unused assignment to reference named 'foo'",
+              "relatedInformation": [
+                {
+                  "location": {
+                    "uri": "file:///tmp/example/foo",
+                    "range": {
+                      "start": {
+                        "line": 5,
+                        "character": 0
+                      },
+                      "end": {
+                        "line": 5,
+                        "character": 2
+                      }
+                    }
+                  },
+                  "message": "End of scope is here"
+                }
+              ]
+            }
+          ]
+        }
+      }
+      EOF
+    end
   end
 end
