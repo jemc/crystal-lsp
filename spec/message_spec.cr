@@ -595,6 +595,145 @@ describe LSP::Message do
       msg.params.text_document.uri.scheme.should eq "file"
       msg.params.text_document.uri.path.should eq "/tmp/example/foo"
     end
+    
+    it "parses Completion" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "method": "textDocument/completion",
+        "jsonrpc": "2.0",
+        "id": "example",
+        "params": {
+          "textDocument": {
+            "uri": "file:///tmp/example/foo"
+          },
+          "position": {
+            "line": 4,
+            "character": 2
+          },
+          "context": {
+            "triggerKind": 2,
+            "triggerCharacter": "."
+          }
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::Completion
+      msg.id.should eq "example"
+      msg.params.text_document.uri.scheme.should eq "file"
+      msg.params.text_document.uri.path.should eq "/tmp/example/foo"
+      msg.params.position.line.should eq 4
+      msg.params.position.character.should eq 2
+      msg.params.context.as(LSP::Data::CompletionContext).try do |context|
+        context.trigger_kind.should eq \
+          LSP::Data::CompletionTriggerKind::TriggerCharacter
+        context.trigger_character.should eq "."
+      end
+    end
+    
+    it "parses CompletionItemResolve" do
+      msg = LSP::Message.from_json <<-EOF
+      {
+        "method": "completionItem/resolve",
+        "jsonrpc": "2.0",
+        "id": "example",
+        "params": {
+          "label": "open",
+          "kind": 3,
+          "detail": "File.open()",
+          "documentation": {
+            "kind": "markdown",
+            "value": "..."
+          },
+          "deprecated": true,
+          "preselect": true,
+          "sortText": "File.open",
+          "filterText": "File.open",
+          "insertTextFormat": 2,
+          "textEdit": {
+            "range": {
+              "start": {
+                "line": 4,
+                "character": 2
+              },
+              "end": {
+                "line": 4,
+                "character": 3
+              }
+            },
+            "newText": ".open"
+          },
+          "additionalTextEdits": [
+            {
+              "range": {
+                "start": {
+                  "line": 1,
+                  "character": 2
+                },
+                "end": {
+                  "line": 1,
+                  "character": 2
+                }
+              },
+              "newText": "require 'file'\\n"
+            }
+          ],
+          "commitCharacters": [
+            "("
+          ],
+          "command": {
+            "title": "Example",
+            "command": "example",
+            "arguments": [
+              "File",
+              "open"
+            ]
+          },
+          "data": {
+            "foo": "bar"
+          }
+        }
+      }
+      EOF
+      
+      msg = msg.as LSP::Message::CompletionItemResolve
+      msg.id.should eq "example"
+      msg.params.label.should eq "open"
+      msg.params.kind.should eq LSP::Data::CompletionItemKind::Function
+      msg.params.detail.should eq "File.open()"
+      msg.params.documentation.as(LSP::Data::MarkupContent).try do |doc|
+        doc.kind.should eq "markdown"
+        doc.value.should eq "..."
+      end
+      msg.params.deprecated.should eq true
+      msg.params.preselect.should eq true
+      msg.params.sort_text.should eq "File.open"
+      msg.params.filter_text.should eq "File.open"
+      msg.params.insert_text_format.should eq LSP::Data::InsertTextFormat::Snippet
+      msg.params.text_edit.as(LSP::Data::TextEdit).tap do |edit|
+        edit.range.start.line.should eq 4
+        edit.range.start.character.should eq 2
+        edit.range.finish.line.should eq 4
+        edit.range.finish.character.should eq 3
+        edit.new_text.should eq ".open"
+      end
+      msg.params.additional_text_edits[0].tap do |edit|
+        edit.range.start.line.should eq 1
+        edit.range.start.character.should eq 2
+        edit.range.finish.line.should eq 1
+        edit.range.finish.character.should eq 2
+        edit.new_text.should eq "require 'file'\n"
+      end
+      msg.params.commit_characters.should eq ["("]
+      msg.params.command.as(LSP::Data::Command).try do |cmd|
+        cmd.title.should eq "Example"
+        cmd.command.should eq "example"
+        cmd.arguments[0].should eq JSON::Any.new("File")
+        cmd.arguments[1].should eq JSON::Any.new("open")
+        cmd
+      end
+      msg.params.data.should eq JSON::Any.new({"foo" => JSON::Any.new("bar")})
+    end
   end
   
   describe "Any.to_json" do
@@ -1013,6 +1152,222 @@ describe LSP::Message do
               ]
             }
           ]
+        }
+      }
+      EOF
+    end
+    
+    it "builds Completion::Response" do
+      req = LSP::Message::Completion.new "example"
+      msg = req.new_response
+      msg.result.is_incomplete = true
+      msg.result.items << LSP::Data::CompletionItem.new.try do |item|
+        item.label = "open"
+        item.kind = LSP::Data::CompletionItemKind::Function
+        item.detail = "File.open()"
+        item.documentation = LSP::Data::MarkupContent.new("markdown", "...")
+        item.deprecated = true
+        item.preselect = true
+        item.sort_text = "File.open"
+        item.filter_text = "File.open"
+        item.insert_text_format = LSP::Data::InsertTextFormat::Snippet
+        item.text_edit = LSP::Data::TextEdit.new.try do |edit|
+          edit.range.start.line = 4
+          edit.range.start.character = 2
+          edit.range.finish.line = 4
+          edit.range.finish.character = 3
+          edit.new_text = ".open"
+          edit
+        end
+        item.additional_text_edits << LSP::Data::TextEdit.new.try do |edit|
+          edit.range.start.line = 1
+          edit.range.start.character = 2
+          edit.range.finish.line = 1
+          edit.range.finish.character = 2
+          edit.new_text = "require 'file'\n"
+          edit
+        end
+        item.commit_characters = ["("]
+        item.command = LSP::Data::Command.new.try do |cmd|
+          cmd.title = "Example"
+          cmd.command = "example"
+          cmd.arguments << JSON::Any.new("File")
+          cmd.arguments << JSON::Any.new("open")
+          cmd
+        end
+        item.data = JSON::Any.new({"foo" => JSON::Any.new("bar")})
+        item
+      end
+      
+      msg.to_pretty_json.should eq <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "id": "example",
+        "result": {
+          "isIncomplete": true,
+          "items": [
+            {
+              "label": "open",
+              "kind": 3,
+              "detail": "File.open()",
+              "documentation": {
+                "kind": "markdown",
+                "value": "..."
+              },
+              "deprecated": true,
+              "preselect": true,
+              "sortText": "File.open",
+              "filterText": "File.open",
+              "insertTextFormat": 2,
+              "textEdit": {
+                "range": {
+                  "start": {
+                    "line": 4,
+                    "character": 2
+                  },
+                  "end": {
+                    "line": 4,
+                    "character": 3
+                  }
+                },
+                "newText": ".open"
+              },
+              "additionalTextEdits": [
+                {
+                  "range": {
+                    "start": {
+                      "line": 1,
+                      "character": 2
+                    },
+                    "end": {
+                      "line": 1,
+                      "character": 2
+                    }
+                  },
+                  "newText": "require 'file'\\n"
+                }
+              ],
+              "commitCharacters": [
+                "("
+              ],
+              "command": {
+                "title": "Example",
+                "command": "example",
+                "arguments": [
+                  "File",
+                  "open"
+                ]
+              },
+              "data": {
+                "foo": "bar"
+              }
+            }
+          ]
+        }
+      }
+      EOF
+    end
+    
+    it "builds CompletionItemResolve::Response" do
+      req = LSP::Message::CompletionItemResolve.new "example"
+      msg = req.new_response
+      msg.result = LSP::Data::CompletionItem.new.try do |item|
+        item.label = "open"
+        item.kind = LSP::Data::CompletionItemKind::Function
+        item.detail = "File.open()"
+        item.documentation = LSP::Data::MarkupContent.new("markdown", "...")
+        item.deprecated = true
+        item.preselect = true
+        item.sort_text = "File.open"
+        item.filter_text = "File.open"
+        item.insert_text_format = LSP::Data::InsertTextFormat::Snippet
+        item.text_edit = LSP::Data::TextEdit.new.try do |edit|
+          edit.range.start.line = 4
+          edit.range.start.character = 2
+          edit.range.finish.line = 4
+          edit.range.finish.character = 3
+          edit.new_text = ".open"
+          edit
+        end
+        item.additional_text_edits << LSP::Data::TextEdit.new.try do |edit|
+          edit.range.start.line = 1
+          edit.range.start.character = 2
+          edit.range.finish.line = 1
+          edit.range.finish.character = 2
+          edit.new_text = "require 'file'\n"
+          edit
+        end
+        item.commit_characters = ["("]
+        item.command = LSP::Data::Command.new.try do |cmd|
+          cmd.title = "Example"
+          cmd.command = "example"
+          cmd.arguments << JSON::Any.new("File")
+          cmd.arguments << JSON::Any.new("open")
+          cmd
+        end
+        item.data = JSON::Any.new({"foo" => JSON::Any.new("bar")})
+        item
+      end
+      
+      msg.to_pretty_json.should eq <<-EOF
+      {
+        "jsonrpc": "2.0",
+        "id": "example",
+        "result": {
+          "label": "open",
+          "kind": 3,
+          "detail": "File.open()",
+          "documentation": {
+            "kind": "markdown",
+            "value": "..."
+          },
+          "deprecated": true,
+          "preselect": true,
+          "sortText": "File.open",
+          "filterText": "File.open",
+          "insertTextFormat": 2,
+          "textEdit": {
+            "range": {
+              "start": {
+                "line": 4,
+                "character": 2
+              },
+              "end": {
+                "line": 4,
+                "character": 3
+              }
+            },
+            "newText": ".open"
+          },
+          "additionalTextEdits": [
+            {
+              "range": {
+                "start": {
+                  "line": 1,
+                  "character": 2
+                },
+                "end": {
+                  "line": 1,
+                  "character": 2
+                }
+              },
+              "newText": "require 'file'\\n"
+            }
+          ],
+          "commitCharacters": [
+            "("
+          ],
+          "command": {
+            "title": "Example",
+            "command": "example",
+            "arguments": [
+              "File",
+              "open"
+            ]
+          },
+          "data": {
+            "foo": "bar"
+          }
         }
       }
       EOF

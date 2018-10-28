@@ -142,7 +142,9 @@ module LSP::Message
   
   alias AnyInRequest =
     Initialize |
-    Shutdown
+    Shutdown |
+    Completion |
+    CompletionItemResolve
   
   alias AnyInResponse =
     GenericResponse |
@@ -156,7 +158,9 @@ module LSP::Message
   alias AnyOutResponse =
     GenericResponse |
     Initialize::Response |
-    Shutdown::Response
+    Shutdown::Response |
+    Completion::Response |
+    CompletionItemResolve::Response
   
   alias AnyOutRequest =
     ShowMessageRequest
@@ -687,11 +691,45 @@ module LSP::Message
   # needed for the initial sorting and filtering, like sortText, filterText,
   # insertText, and textEdit must be provided in the textDocument/completion
   # request and must not be changed during resolve.
-  # TODO: struct Completion
+  struct Completion
+    Message.def_request("textDocument/completion")
+    
+    struct Params
+      JSON.mapping({
+        # The text document.
+        text_document: {
+          type: Data::TextDocumentIdentifier,
+          key: "textDocument",
+        },
+        
+        # The position inside the text document.
+        position: Data::Position,
+        
+        # The completion context. This is only available if the client
+        # specifies to send this using
+        # `ClientCapabilities.textDocument.completion.contextSupport === true`
+        context: Data::CompletionContext?,
+      })
+      def initialize(
+        @text_document = Data::TextDocumentIdentifier.new,
+        @position = Data::Position.new,
+        @context = nil)
+      end
+    end
+    
+    alias Result = Data::CompletionList
+    alias ErrorData = Nil
+  end
   
   # The request is sent from the client to the server to resolve additional
   # information for a given completion item.
-  # TODO: struct CompletionItemResolve
+  struct CompletionItemResolve
+    Message.def_request("completionItem/resolve")
+    
+    alias Params = Data::CompletionItem
+    alias Result = Data::CompletionItem
+    alias ErrorData = Nil
+  end
   
   # The hover request is sent from the client to the server to request hover
   # information at a given text document position.
