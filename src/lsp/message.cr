@@ -46,6 +46,8 @@ module LSP::Message
     
     def self.method; {{method}} end
     
+    def self.empty_result; Result.new end
+    
     def response_from_json(input)
       res = Response.from_json(input)
       res.request = self
@@ -68,7 +70,7 @@ module LSP::Message
       result:  {type: Result, emit_null: true},
     })
     
-    def initialize(@id, @result : Result = Result.new)
+    def initialize(@id, @result : Result = {{request_class}}.empty_result)
       @jsonrpc = "2.0"
     end
     
@@ -319,6 +321,7 @@ module LSP::Message
     
     alias Result = Nil
     alias ErrorData = Nil
+    def self.empty_result; nil end
   end
   
   # A notification to ask the server to exit its process.
@@ -368,6 +371,7 @@ module LSP::Message
     
     alias Result = LSP::Data::MessageActionItem?
     alias ErrorData = Nil
+    def self.empty_result; nil end
   end
   
   # The log message notification is sent from the server to the client to ask
