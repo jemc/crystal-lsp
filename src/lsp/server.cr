@@ -12,7 +12,7 @@ class LSP::Server
       @started = true
       spawn do
         loop do
-          msg = LSP::Wire.read_message(@in, @outstanding)
+          msg = LSP::Codec.read_message(@in, @outstanding)
           if msg.is_a?(Message::Any)
             @incoming.send msg
           end
@@ -24,19 +24,19 @@ class LSP::Server
   
   def notify(m_class : M.class): M forall M
     msg : M = yield M.new
-    LSP::Wire.write_message(@out, msg, @outstanding)
+    LSP::Codec.write_message(@out, msg, @outstanding)
     msg
   end
   
   def request(m_class : M.class): M forall M
     msg : M = yield M.new(UUID.random.to_s)
-    LSP::Wire.write_message(@out, msg, @outstanding)
+    LSP::Codec.write_message(@out, msg, @outstanding)
     msg
   end
   
   def respond(req : M): M::Response forall M
     msg : M::Response = yield req.new_response
-    LSP::Wire.write_message(@out, msg, @outstanding)
+    LSP::Codec.write_message(@out, msg, @outstanding)
     msg
   end
 end

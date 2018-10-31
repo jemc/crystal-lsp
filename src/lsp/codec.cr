@@ -1,4 +1,4 @@
-module LSP::Wire
+module LSP::Codec
   # Write a message using the LSP wire format, including headers.
   def self.write_message(
     io : IO,

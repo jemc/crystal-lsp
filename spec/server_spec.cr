@@ -13,7 +13,7 @@ describe LSP::Server do
     end
     msg.params.message.should eq "Hello, World!"
     
-    LSP::Wire.read_message(IO::Memory.new(o.to_s)).should eq msg
+    LSP::Codec.read_message(IO::Memory.new(o.to_s)).should eq msg
   end
   
   it "can send a request" do
@@ -28,7 +28,7 @@ describe LSP::Server do
     end
     msg.params.message.should eq "Hello, World!"
     
-    LSP::Wire.read_message(IO::Memory.new(o.to_s)).should eq msg
+    LSP::Codec.read_message(IO::Memory.new(o.to_s)).should eq msg
   end
   
   it "can receive a request and send a response" do
@@ -36,7 +36,7 @@ describe LSP::Server do
     req = LSP::Message::Initialize.new(UUID.random.to_s)
     req.params.process_id = 42
     buf = IO::Memory.new
-    LSP::Wire.write_message(buf, req, outstanding)
+    LSP::Codec.write_message(buf, req, outstanding)
     
     i = IO::Memory.new(buf.to_s)
     o = IO::Memory.new
@@ -51,6 +51,6 @@ describe LSP::Server do
     end
     msg.result.capabilities.hover_provider.should eq true
     
-    LSP::Wire.read_message(IO::Memory.new(o.to_s), outstanding).should eq msg
+    LSP::Codec.read_message(IO::Memory.new(o.to_s), outstanding).should eq msg
   end
 end
