@@ -1,6 +1,6 @@
 require "uuid"
 
-class LSP::Server
+class LSP::Wire
   def initialize(@in : IO, @out : IO)
     @started = false
     @incoming = Channel(Message::Any).new

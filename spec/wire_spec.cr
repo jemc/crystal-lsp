@@ -1,11 +1,11 @@
 require "./spec_helper"
 
-describe LSP::Server do
+describe LSP::Wire do
   it "can send a notification" do
     i = IO::Memory.new("")
     o = IO::Memory.new
     
-    server = LSP::Server.new(i, o)
+    server = LSP::Wire.new(i, o)
     
     msg = server.notify LSP::Message::ShowMessage do |msg|
       msg.params.message = "Hello, World!"
@@ -20,7 +20,7 @@ describe LSP::Server do
     i = IO::Memory.new("")
     o = IO::Memory.new
     
-    server = LSP::Server.new(i, o)
+    server = LSP::Wire.new(i, o)
     
     msg = server.request LSP::Message::ShowMessageRequest do |msg|
       msg.params.message = "Hello, World!"
@@ -41,7 +41,7 @@ describe LSP::Server do
     i = IO::Memory.new(buf.to_s)
     o = IO::Memory.new
     
-    server = LSP::Server.new(i, o)
+    server = LSP::Wire.new(i, o)
     server.receive.should eq req
     
     msg = server.respond req do |msg|
