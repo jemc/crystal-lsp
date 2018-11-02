@@ -8,8 +8,9 @@ module LSP::Codec
       outstanding[message.id] = message
     end
     body = message.to_json
-    io.print("Content-Length: #{body.bytesize}\r\n\r\n")
+    io.print("Content-Length: #{body.bytesize + 1}\r\n\r\n")
     io.print(body)
+    io.print("\n")
   end
   
   # Read a message using the LSP wire format, including headers.
