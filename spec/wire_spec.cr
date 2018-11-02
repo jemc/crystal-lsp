@@ -5,9 +5,9 @@ describe LSP::Wire do
     i = IO::Memory.new("")
     o = IO::Memory.new
     
-    server = LSP::Wire.new(i, o)
+    wire = LSP::Wire.new(i, o)
     
-    msg = server.notify LSP::Message::ShowMessage do |msg|
+    msg = wire.notify LSP::Message::ShowMessage do |msg|
       msg.params.message = "Hello, World!"
       msg
     end
@@ -20,9 +20,9 @@ describe LSP::Wire do
     i = IO::Memory.new("")
     o = IO::Memory.new
     
-    server = LSP::Wire.new(i, o)
+    wire = LSP::Wire.new(i, o)
     
-    msg = server.request LSP::Message::ShowMessageRequest do |msg|
+    msg = wire.request LSP::Message::ShowMessageRequest do |msg|
       msg.params.message = "Hello, World!"
       msg
     end
@@ -41,10 +41,10 @@ describe LSP::Wire do
     
     LSP::Codec.write_message(send_i, req, outstanding)
     
-    server = LSP::Wire.new(i, o)
-    server.receive.should eq req
+    wire = LSP::Wire.new(i, o)
+    wire.receive.should eq req
     
-    msg = server.respond req do |msg|
+    msg = wire.respond req do |msg|
       msg.result.capabilities.hover_provider.should eq false
       msg.result.capabilities.hover_provider = true
       msg
