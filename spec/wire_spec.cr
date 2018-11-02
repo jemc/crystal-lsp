@@ -32,14 +32,14 @@ describe LSP::Wire do
   end
   
   it "can receive a request and send a response" do
-    outstanding = {} of (String | Int64) => LSP::Message::AnyRequest
+    i, send_i = IO.pipe
+    from_o, o = IO.pipe
+    
     req = LSP::Message::Initialize.new(UUID.random.to_s)
     req.params.process_id = 42
-    buf = IO::Memory.new
-    LSP::Codec.write_message(buf, req, outstanding)
+    outstanding = {} of (String | Int64) => LSP::Message::AnyRequest
     
-    i = IO::Memory.new(buf.to_s)
-    o = IO::Memory.new
+    LSP::Codec.write_message(send_i, req, outstanding)
     
     server = LSP::Wire.new(i, o)
     server.receive.should eq req
@@ -51,6 +51,6 @@ describe LSP::Wire do
     end
     msg.result.capabilities.hover_provider.should eq true
     
-    LSP::Codec.read_message(IO::Memory.new(o.to_s), outstanding).should eq msg
+    LSP::Codec.read_message(from_o, outstanding).should eq msg
   end
 end
