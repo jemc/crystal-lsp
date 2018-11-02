@@ -7,14 +7,20 @@ class LSP::Wire
     @outstanding = {} of (String | Int64) => Message::AnyRequest
   end
   
+  # Wait for the next Message::Any to arrive from the input IO channel.
+  # Malformed data on the IO channel is silently ignored.
+  # Raises Channel::ClosedError if the end of the IO has been reached.
   def receive
     if !@started
       @started = true
       spawn do
         loop do
-          msg = LSP::Codec.read_message(@in, @outstanding)
-          if msg.is_a?(Message::Any)
+          begin
+            msg = LSP::Codec.read_message(@in, @outstanding)
             @incoming.send msg
+          rescue IO::EOFError
+            @incoming.close
+            break
           end
         end
       end

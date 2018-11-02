@@ -40,4 +40,25 @@ describe LSP::Codec do
       "Content-Length: 76\r\n\r\n" \
       "{\"jsonrpc\":\"2.0\",\"id\":\"#{id}\",\"result\":null}\n"
   end
+  
+  it "raises IO::EOFError when there are no bytes left to read" do
+    expect_raises IO::EOFError do
+      LSP::Codec.read_message(IO::Memory.new(""))
+    end
+  end
+  
+  it "raises IO::EOFError when only malformed lines are available to read" do
+    expect_raises IO::EOFError do
+      LSP::Codec.read_message(IO::Memory.new("mal\r\nformed\r\n"))
+    end
+  end
+  
+  it "reads a valid message preceded by malformed lines" do
+    msg = LSP::Message::ShowMessage.new
+    buf = IO::Memory.new
+    buf.print("mal\r\nformed\r\n")
+    LSP::Codec.write_message(buf, msg)
+    
+    LSP::Codec.read_message(IO::Memory.new(buf.to_s)).should eq msg
+  end
 end
